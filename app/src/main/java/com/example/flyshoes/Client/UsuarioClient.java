@@ -2,8 +2,11 @@ package com.example.flyshoes.Client;
 
 import com.example.flyshoes.Modelo.Usuario;
 
+import okhttp3.RequestBody;
 import retrofit2.Call;
+import retrofit2.http.Body;
 import retrofit2.http.GET;
+import retrofit2.http.POST;
 import retrofit2.http.Path;
 
 //usuario
@@ -33,4 +36,19 @@ public interface UsuarioClient {
     @GET("usuario/usuarioByLogin/{login}/{pass}")
     Call<Usuario> usuarioByLogin(@Path("login") String login,@Path("pass") String pass);
 
+    /**
+     * Comprobar si el email ya se encuentra registrado
+     * @param email
+     * @return
+     */
+    @GET("usuario/findEmail/{login}/{email}")
+    Call<Usuario> findEmail(@Path("email") String email);
+
+    /**
+     * Alta usuario
+     * @param body
+     * @return
+     */
+    @POST("usuario/")
+    Call<Usuario> create(@Body RequestBody body);
 }

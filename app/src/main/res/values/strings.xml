@@ -3,7 +3,7 @@
     <string name="usuario">Usuario</string>
     <string name="contrasena">Contraseña</string>
     <string name="repetirContrasena">Repetir contraseña</string>
-    <string name="correo">Correo electrónico</string>
+    <string name="correo">Email</string>
     <string name="iniciar">Iniciar</string>
     <string name="registrarse">Registrarse</string>
     <string name="toastFormatoIncorerctoEmail">Ingresa un correo válido</string>
@@ -15,6 +15,10 @@
     <string name="toastErrorServidor">Lo sentimos en estos momentos no podemos atenderte..</string>
     <string name="toastContrasenasIncorrectas">Las contraseñas introducides no coinciden</string>
     <string name="toastCamposIncompletos">Por favor rellena los campos incompletos </string>
+    <string name="recuerdame">Recuérdame</string>
+    <string name="direccion">Dirección</string>
+    <string name="telefono">Teléfono</string>
+    <string name="nombre">Nombre</string>
 
     <string name="cancelar">Cancelar</string>
 </resources>

@@ -7,25 +7,23 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.airbnb.lottie.LottieAnimationView;
 import com.example.flyshoes.Client.UsuarioClient;
 import com.example.flyshoes.ControlDB.UsuarioDB;
-import com.example.flyshoes.Interface.ClientApi;
 import com.example.flyshoes.Modelo.PrivilegioUsuario;
 import com.example.flyshoes.Modelo.Usuario;
 import com.example.flyshoes.R;
 import com.example.flyshoes.Seguridad.Seguridad;
 
 import java.io.ByteArrayOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.KeyFactory;
 import java.security.PublicKey;
-import java.security.SecureRandom;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.logging.Logger;
 
@@ -39,15 +37,16 @@ import retrofit2.Retrofit;
 import retrofit2.converter.simplexml.SimpleXmlConverterFactory;
 
 
-public class LogInActivity extends AppCompatActivity implements Callback<Usuario> {
+public class LogInActivity extends AppCompatActivity implements Callback<Usuario>, View.OnClickListener {
 
-    private static UsuarioDB usuarioDB = null;
+    private UsuarioDB usuarioDB;
     private LottieAnimationView animacionView;
     private EditText txtUsuario, txtpContrasena;
     private Button btnIniciar;
     private TextView tvRegistrarse;
     private Usuario usuario;
     private Intent intent;
+    private Switch swRecuerdame;
     private static PublicKey publicKey;
     private static Cipher cipher;
     private static final char[] HEXADECIMAL_ARRAY = "0123456789ABCDEF".toCharArray();
@@ -63,6 +62,7 @@ public class LogInActivity extends AppCompatActivity implements Callback<Usuario
         animacionView.playAnimation();
         animacionView.setRepeatCount(500);
         usuarioDB = new UsuarioDB(getApplicationContext());
+        swRecuerdame = (Switch) findViewById(R.id.swRecuerdame);
         txtUsuario = (EditText) findViewById(R.id.txtUsuario);
         txtpContrasena = (EditText) findViewById(R.id.txtpContrasena);
         btnIniciar = (Button) findViewById(R.id.btnIniciar);
@@ -70,54 +70,25 @@ public class LogInActivity extends AppCompatActivity implements Callback<Usuario
         tvRegistrarse.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                intent = new Intent(LogInActivity.this, MainActivity.class);
+                intent = new Intent(LogInActivity.this, SignInActivity.class);
                 startActivity(intent);
+                finish();
             }
         });
-        btnIniciar.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (txtUsuario.getText().toString().equals("") || txtpContrasena.getText().toString().equals("")) {
-                    Toast.makeText(LogInActivity.this, getString(R.string.toastCamposIncompletos), Toast.LENGTH_SHORT).show();
-                } else if (usuario != null) {
-                    LOGGER.info("Usuario se encuentra registrado " + usuario.getLogin());
-                    if (usuario != null) {
-                        LOGGER.info("Usuario autenticado  " + usuario.getPassword());
-
-                        if (usuario.getPrivilege().equals(PrivilegioUsuario.VENDEDOR)) {
-
-                        } else {
-                            Toast.makeText(LogInActivity.this, getString(R.string.toastUsuario), Toast.LENGTH_SHORT).show();
-                        }
-
-                    } else {
-                        Toast.makeText(LogInActivity.this, getString(R.string.toastContrasenaIncorrecta), Toast.LENGTH_SHORT).show();
-                    }
-
-
-                    //Aqui preguntamos solo por login retrofit
-                 /*   if (jugadorDB.comprobarUsuario(jugador.getUsuario())) {
-                        //aqui solo por pass retrofit
-                        if (jugadorDB.comprobarUsuarioContrasena(jugador.getUsuario(), jugador.getContrasena())) {
-                            intent = new Intent(MainActivity.this, InicioActivity.class);
-                            intent.putExtra("dato", jugador);
-                            startActivity(intent);
-                        } else {
-                            Toast.makeText(LogInActivity.this, "Contraseña incorrecta", Toast.LENGTH_SHORT).show();
-                        }
-                    } else {
-                        Toast.makeText(LogInActivity.this, "Usuario no existe", Toast.LENGTH_SHORT).show();
-                    }*/
-                } else {
-                    Toast.makeText(LogInActivity.this, getString(R.string.toastUsuarioNoEncontrado), Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
-
+        btnIniciar.setOnClickListener(this);
+        Usuario usuarioRecuerdame = usuarioDB.comprobarGuardar();
+        if (usuarioRecuerdame != null) {
+            txtUsuario.setText(usuarioRecuerdame.getLogin());
+            txtpContrasena.setText(usuarioRecuerdame.getPassword());
+            swRecuerdame.setChecked(true);
+            if (txtUsuario.getText().toString().length() == 0)
+                swRecuerdame.setChecked(false);
+        }
 
     }
 
     private void contrasenaCorrecta(String login, String pass) {
+
         Retrofit retrofit = new Retrofit.Builder().baseUrl("http://192.168.1.23:8080/ApplicationServer/webresources/")
                 .client(new OkHttpClient()).addConverterFactory(SimpleXmlConverterFactory.create()).build();
         UsuarioClient usuarioClient = retrofit.create(UsuarioClient.class);
@@ -126,6 +97,7 @@ public class LogInActivity extends AppCompatActivity implements Callback<Usuario
     }
 
     private void estaUsuario(String login) {
+
         Retrofit retrofit = new Retrofit.Builder().baseUrl("http://192.168.1.23:8080/ApplicationServer/webresources/")
                 .client(new OkHttpClient()).addConverterFactory(SimpleXmlConverterFactory.create()).build();
         UsuarioClient usuarioClient = retrofit.create(UsuarioClient.class);
@@ -195,16 +167,41 @@ public class LogInActivity extends AppCompatActivity implements Callback<Usuario
 
     @Override
     public void onResponse(Call<Usuario> call, Response<Usuario> response) {
-        usuario = null;
+
         if (response.isSuccessful()) {
             usuario = response.body();
-        }else{
-            LOGGER.severe("ERROR"+response.message());
+            LOGGER.info("Usuario autenticado  ");
+            //Ver que tipo de privilegio tiene el usuario
+            if (usuario.getPrivilege().equals(PrivilegioUsuario.VENDEDOR)) {
+                //guardar o borrar dependiendo al Switch
+                if (swRecuerdame.isChecked()) {
+                    usuarioDB.agregarUsuario(txtUsuario.getText().toString(), txtpContrasena.getText().toString(), "SI");
+                } else {
+                    usuarioDB.borrarUsuario(txtUsuario.getText().toString(), txtpContrasena.getText().toString());
+                }
+
+                //Ventana siguiente
+
+            } else {
+                Toast.makeText(LogInActivity.this, getString(R.string.toastUsuario), Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            LOGGER.severe("ERROR Autenticacion fallida" + response.message());
+            Toast.makeText(LogInActivity.this, getString(R.string.toastContrasenaIncorrecta), Toast.LENGTH_SHORT).show();
         }
     }
 
     @Override
     public void onFailure(Call<Usuario> call, Throwable t) {
         Toast.makeText(LogInActivity.this, getString(R.string.toastErrorServidor), Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onClick(View v) {
+        if (txtUsuario.getText().toString().equals("") || txtpContrasena.getText().toString().equals("")) {
+            Toast.makeText(LogInActivity.this, getString(R.string.toastCamposIncompletos), Toast.LENGTH_SHORT).show();
+        } else {
+            contrasenaCorrecta(txtUsuario.getText().toString(), encriptarContrasenia(txtpContrasena.getText().toString()));
+        }
     }
 }
